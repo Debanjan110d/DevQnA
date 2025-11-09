@@ -1,6 +1,7 @@
-export const db = "main-stackoverflow"
-export const constquestionCollection = "questions"
-export const answerCollection = "answers"
-export const commentCollection = "comments"
-export const votesCollection = "votes"
-export const questionAttachmentBucket = "question-attachments"
+// src/lib/name.ts
+export const db: string = "main-stackoverflow";
+export const questionCollection: string = "questions";
+export const answerCollection: string = "answers";
+export const commentCollection: string = "comments";
+export const votesCollection: string = "votes";
+export const questionAttachmentBucket: string = "question-attachments";

@@ -16,7 +16,7 @@ export interface UserPrefs {
     email: string
 }
 
-interface MyAuthStore { //? This is a interface ,its comin g up because we are using typescript if we are using hs we do't have to work with these things 
+interface MyAuthStore { //? This is a interface ,its coming up because we are using typescript if we are using hs we do't have to work with these things 
     session: Models.Session | null;// This is given by the appwrite itslf
     jwt : string | null;
     user : Models.User<UserPrefs> | null;

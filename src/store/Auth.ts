@@ -33,9 +33,9 @@ interface MyAuthStore { //? This is a interface ,its coming up because we are us
     }
     >;
     createAccount(
-        name:string,
         email: string,
         password: string,
+        name:string
     ): Promise<
     {
         sucess : boolean 
@@ -98,9 +98,9 @@ export const useAuthStore = create<MyAuthStore>()( //? the 1st () are initilizin
                     }, 
 
                     
-                    async createAccount(name:string,email: string,password: string){
+                    async createAccount(email: string,password: string,name:string){
                         try {
-                            await await account.create({userId:ID.unique(),name,email,password});
+                            await account.create({userId:ID.unique(),email,password,name});
                             return{
                                 sucess : true
                             }

@@ -1,8 +1,11 @@
 "use client"
 import { useAuthStore } from "@/store/Auth"
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { InputWithIcon } from '@/components/ui/input-with-icon'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 function LoginPage() {
   const { login } = useAuthStore()
@@ -36,30 +39,34 @@ function LoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-4">
-      {error && <p className="text-sm text-destructive mb-2">{error}</p>}
+    <div className="min-h-[calc(100vh-0px)] flex items-center justify-center px-4">
+      <Card>
+        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#ffffff' }}>Sign in</h1>
+        <p className="text-sm mb-4" style={{ color: '#94a3b8' }}>Welcome back — please enter your details.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required />
-        </div>
+        {error && <p className="text-sm mb-2" style={{ color: '#ef4444' }}>{error}</p>}
 
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" name="password" type="password" required />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <InputWithIcon id="email" name="email" type="email" required icon={<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 8.5v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>} />
+          </div>
 
-        <div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {isLoading ? 'Signing in…' : 'Sign in'}
-          </button>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <InputWithIcon id="password" name="password" type="password" required icon={<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 11V8a5 5 0 0 1 10 0v3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>} />
+          </div>
+
+          <div className="pt-2">
+            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Signing in…' : 'Sign in'}</Button>
+          </div>
+        </form>
+
+        <div className="mt-4 text-sm text-center" style={{ color: '#94a3b8' }}>
+          <span>Don't have an account? </span>
+          <Link href="/register" style={{ color: '#0ea5a4', textDecoration: 'none' }} className="hover:underline">Create one</Link>
         </div>
-      </form>
+      </Card>
     </div>
   )
 }

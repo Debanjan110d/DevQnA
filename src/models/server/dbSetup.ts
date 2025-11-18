@@ -6,9 +6,31 @@ import { createCommentTable } from "./comment.collection";
 
 import { databases } from "./config";
 
+async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      const status = error && typeof error === "object" && "code" in error ? (error as { code: number }).code : undefined;
+      // Don't retry on 404 (not found) or 409 (conflict/already exists)
+      if (status === 404 || status === 409) {
+        throw error;
+      }
+      // On 502 Bad Gateway or other network errors, retry
+      if (i === retries - 1) {
+        throw error; // Last attempt failed
+      }
+      console.warn(`⚠️ Attempt ${i + 1} failed, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+  throw new Error("Retry logic failed");
+}
+
 export default async function createDB() {
   try {
-    await databases.get({ databaseId: db });
+    await retryWithBackoff(() => databases.get({ databaseId: db }));
     console.log("✅ Database already exists:", db);
 
     await createQuestionTable();
@@ -26,11 +48,11 @@ export default async function createDB() {
 
     if (status === 404 || /not found/i.test(message)) {
       try {
-        const created = await databases.create({
+        const created = await retryWithBackoff(() => databases.create({
           databaseId: db,
           name: "StackOverflow Database",
           enabled: true,
-        });
+        }));
 
         console.log("✅ Database created:", created?.$id ?? created);
 
@@ -47,6 +69,10 @@ export default async function createDB() {
       }
     } else {
       console.error("❌ Error checking database:", error);
+      console.error("💡 If you see 502 Bad Gateway, check:");
+      console.error("   1. Appwrite server is running and accessible");
+      console.error("   2. NEXT_PUBLIC_APPWRITE_HOST_URI is correct in .env");
+      console.error("   3. Your network connection");
       throw error;
     }
   }

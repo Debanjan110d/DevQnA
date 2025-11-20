@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_APPWRITE_HOST_URI": "@appwrite_host_uri",
+    "NEXT_PUBLIC_APPWRITE_PROJECT_ID": "@appwrite_project_id",
+    "APPWRITE_API_KEY": "@appwrite_api_key"
+  }
+}

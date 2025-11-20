@@ -6,11 +6,12 @@ import { Avatar } from './ui/avatar'
 import { VoteButtons } from './VoteButtons'
 import { useAuthStore } from '@/store/Auth'
 import { useAnswers, useAuthor } from '@/hooks/useAppwrite'
-import { createAnswer } from '@/lib/appwrite'
+import { createAnswer, updateAnswer, deleteAnswer } from '@/lib/appwrite'
 import { formatDistanceToNow } from '@/lib/utils'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { Answer } from '@/models'
+import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 
 const RTE = dynamic(() => import('./RTE'), { ssr: false })
 const Markdown = dynamic(
@@ -22,8 +23,48 @@ interface AnswersProps {
   questionId: string
 }
 
-function AnswerItem({ answer }: { answer: Answer }) {
+function AnswerItem({ answer, onUpdate }: { answer: Answer; onUpdate: () => void }) {
   const { author } = useAuthor(answer.authorId)
+  const { session } = useAuthStore()
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState(answer.content)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const isAuthor = session?.$id === answer.authorId
+
+  const handleUpdate = async () => {
+    if (!editContent.trim() || editContent.length < 20) return
+
+    setIsUpdating(true)
+    try {
+      const result = await updateAnswer(answer.$id, { content: editContent.trim() })
+      if (result.success) {
+        setIsEditing(false)
+        onUpdate()
+      }
+    } catch (error) {
+      console.error('Failed to update answer:', error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this answer?')) return
+
+    setIsDeleting(true)
+    try {
+      const result = await deleteAnswer(answer.$id)
+      if (result.success) {
+        onUpdate()
+      }
+    } catch (error) {
+      console.error('Failed to delete answer:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
   
   return (
     <div
@@ -41,40 +82,99 @@ function AnswerItem({ answer }: { answer: Answer }) {
 
         {/* Content Column */}
         <div className="flex-1 min-w-0">
-          <div
-            className="prose prose-invert max-w-none mb-6"
-            data-color-mode="dark"
-          >
-            <Markdown source={answer.content} />
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end pt-4 border-t border-white/10">
-            {/* Author Card */}
-            {author && (
-              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                <Avatar
-                  src={author.avatar}
-                  alt={author.name}
-                  fallback={author.name.charAt(0)}
-                  size="md"
-                />
-                <div className="flex flex-col">
-                  <Link
-                    href={`/users/${answer.authorId}`}
-                    className="text-sm font-medium text-primary hover:text-primary/80"
-                  >
-                    {author.name}
-                  </Link>
-                  <span className="text-xs text-gray-400">{author.reputation} reputation</span>
-                </div>
-                <div className="ml-4 text-right">
-                  <div className="text-xs text-gray-400">answered</div>
-                  <div className="text-xs text-gray-300">{formatDistanceToNow(answer.$createdAt)}</div>
-                </div>
+          {isEditing ? (
+            <div className="space-y-4" data-color-mode="dark">
+              <RTE
+                value={editContent}
+                onChange={(val) => setEditContent(val || '')}
+                height={200}
+                preview="edit"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '0.5rem',
+                }}
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleUpdate}
+                  disabled={isUpdating || editContent.length < 20}
+                >
+                  {isUpdating ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsEditing(false)
+                    setEditContent(answer.content)
+                  }}
+                  variant="outline"
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </Button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div
+                className="prose prose-invert max-w-none mb-6"
+                data-color-mode="dark"
+              >
+                <Markdown source={answer.content} />
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                {/* Edit/Delete Buttons */}
+                {isAuthor && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      variant="ghost"
+                      className="gap-2 text-sm"
+                    >
+                      <FiEdit2 size={14} />
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={handleDelete}
+                      variant="ghost"
+                      className="gap-2 text-sm text-red-400 hover:text-red-300"
+                      disabled={isDeleting}
+                    >
+                      <FiTrash2 size={14} />
+                      {isDeleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Author Card */}
+                {author && (
+                  <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <Avatar
+                      src={author.avatar}
+                      alt={author.name}
+                      fallback={author.name.charAt(0)}
+                      size="md"
+                    />
+                    <div className="flex flex-col">
+                      <Link
+                        href={`/users/${answer.authorId}`}
+                        className="text-sm font-medium text-primary hover:text-primary/80"
+                      >
+                        {author.name}
+                      </Link>
+                      <span className="text-xs text-gray-400">{author.reputation} reputation</span>
+                    </div>
+                    <div className="ml-4 text-right">
+                      <div className="text-xs text-gray-400">answered</div>
+                      <div className="text-xs text-gray-300">{formatDistanceToNow(answer.$createdAt)}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -133,7 +233,7 @@ export function Answers({ questionId }: AnswersProps) {
       {/* Existing Answers */}
       <div className="space-y-6">
         {answers.map((answer) => (
-          <AnswerItem key={answer.$id} answer={answer} />
+          <AnswerItem key={answer.$id} answer={answer} onUpdate={refetch} />
         ))}
       </div>
 

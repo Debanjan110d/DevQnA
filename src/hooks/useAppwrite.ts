@@ -66,25 +66,25 @@ export function useQuestion(questionId: string) {
     ])
   }
 
-  useEffect(() => {
-    async function fetchQuestion() {
-      if (!questionId) return
+  const refetch = useCallback(async () => {
+    if (!questionId) return
 
-      try {
-        setLoading(true)
-        const result = await withTimeout(getQuestionById(questionId))
-        setQuestion(result)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch question')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      setLoading(true)
+      const result = await withTimeout(getQuestionById(questionId))
+      setQuestion(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch question')
+    } finally {
+      setLoading(false)
     }
-
-    fetchQuestion()
   }, [questionId])
 
-  return { question, loading, error }
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { question, loading, error, refetch }
 }
 
 export function useAnswers(questionId: string) {

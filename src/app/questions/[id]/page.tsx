@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { VoteButtons } from '@/components/VoteButtons'
@@ -11,11 +11,17 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { AnimatedCardReveal } from '@/components/ui/animated-card-reveal'
 import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useQuestion, useAuthor, useVotes, useAnswers } from '@/hooks/useAppwrite'
+import { updateQuestion, deleteQuestion } from '@/lib/appwrite'
+import { useAuthStore } from '@/store/Auth'
 import { formatDistanceToNow } from '@/lib/utils'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 
+const RTE = dynamic(() => import('@/components/RTE'), { ssr: false })
 const Markdown = dynamic(
   () => import('@uiw/react-md-editor').then((mod) => mod.default.Markdown!),
   { ssr: false }
@@ -23,14 +29,71 @@ const Markdown = dynamic(
 
 export default function QuestionDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const questionId = params.id as string
+  const { session } = useAuthStore()
   
-  const { question, loading: questionLoading, error: questionError } = useQuestion(questionId)
+  const { question, loading: questionLoading, error: questionError, refetch } = useQuestion(questionId)
   const { author, loading: authorLoading } = useAuthor(question?.authorId || '')
   const { voteCount } = useVotes(questionId, 'question')
   const { answers } = useAnswers(questionId)
 
   const [showComments, setShowComments] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editTags, setEditTags] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const isAuthor = session?.$id === question?.authorId
+
+  const handleEdit = () => {
+    if (question) {
+      setEditTitle(question.title)
+      setEditContent(question.content)
+      setEditTags(question.tags.join(', '))
+      setIsEditing(true)
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!editTitle.trim() || !editContent.trim()) return
+
+    setIsUpdating(true)
+    try {
+      const tags = editTags.split(',').map(t => t.trim()).filter(t => t)
+      const result = await updateQuestion(questionId, {
+        title: editTitle.trim(),
+        content: editContent.trim(),
+        tags
+      })
+      if (result.success) {
+        setIsEditing(false)
+        refetch()
+      }
+    } catch (error) {
+      console.error('Failed to update question:', error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this question? This action cannot be undone.')) return
+
+    setIsDeleting(true)
+    try {
+      const result = await deleteQuestion(questionId)
+      if (result.success) {
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Failed to delete question:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   if (questionLoading) {
     return (
@@ -107,50 +170,129 @@ export default function QuestionDetailPage() {
 
                   {/* Question Content */}
                   <div className="flex-1 min-w-0">
-                    <div data-color-mode="dark" className="prose prose-invert max-w-none mb-6">
-                      <Markdown source={question.content} />
-                    </div>
+                    {isEditing ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Title</label>
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Question title"
+                            className="w-full"
+                          />
+                        </div>
+                        <div data-color-mode="dark">
+                          <label className="block text-sm font-medium mb-2">Content</label>
+                          <RTE
+                            value={editContent}
+                            onChange={(val) => setEditContent(val || '')}
+                            height={300}
+                            preview="edit"
+                            style={{
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '0.5rem',
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+                          <Input
+                            value={editTags}
+                            onChange={(e) => setEditTags(e.target.value)}
+                            placeholder="react, typescript, nextjs"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={handleUpdate}
+                            disabled={isUpdating || !editTitle.trim() || !editContent.trim()}
+                          >
+                            {isUpdating ? 'Saving...' : 'Save Changes'}
+                          </Button>
+                          <Button
+                            onClick={() => setIsEditing(false)}
+                            variant="outline"
+                            disabled={isUpdating}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div data-color-mode="dark" className="prose prose-invert max-w-none mb-6">
+                          <Markdown source={question.content} />
+                        </div>
 
-                    {/* Question Footer */}
-                    <div className="flex items-center justify-between pt-6 border-t border-white/10">
-                      <button
-                        onClick={() => setShowComments(!showComments)}
-                        className="text-sm text-gray-400 hover:text-primary transition-colors"
-                      >
-                        {showComments ? 'Hide' : 'Show'} comments
-                      </button>
+                        {/* Question Footer */}
+                        <div className="flex items-center justify-between pt-6 border-t border-white/10">
+                          <div className="flex gap-2 items-center">
+                            <button
+                              onClick={() => setShowComments(!showComments)}
+                              className="text-sm text-gray-400 hover:text-primary transition-colors"
+                            >
+                              {showComments ? 'Hide' : 'Show'} comments
+                            </button>
+                            
+                            {isAuthor && (
+                              <>
+                                <span className="text-gray-600">•</span>
+                                <Button
+                                  onClick={handleEdit}
+                                  variant="ghost"
+                                  className="gap-2 text-sm h-auto py-1"
+                                >
+                                  <FiEdit2 size={14} />
+                                  Edit
+                                </Button>
+                                <Button
+                                  onClick={handleDelete}
+                                  variant="ghost"
+                                  className="gap-2 text-sm h-auto py-1 text-red-400 hover:text-red-300"
+                                  disabled={isDeleting}
+                                >
+                                  <FiTrash2 size={14} />
+                                  {isDeleting ? 'Deleting...' : 'Delete'}
+                                </Button>
+                              </>
+                            )}
+                          </div>
 
-                      {/* Author Info */}
-                      <div className="flex items-center gap-3">
-                        {!authorLoading && author && (
-                          <>
-                            <Avatar
-                              src={author.avatar}
-                              alt={author.name}
-                              fallback={author.name.charAt(0)}
-                              size="md"
-                            />
-                            <div className="flex flex-col">
-                              <Link
-                                href={`/users/${question.authorId}`}
-                                className="text-primary hover:text-primary/80 font-medium"
-                              >
-                                {author.name}
-                              </Link>
-                              <span className="text-xs text-gray-500">
-                                {author.reputation} reputation
-                              </span>
-                            </div>
-                          </>
+                          {/* Author Info */}
+                          <div className="flex items-center gap-3">
+                            {!authorLoading && author && (
+                              <>
+                                <Avatar
+                                  src={author.avatar}
+                                  alt={author.name}
+                                  fallback={author.name.charAt(0)}
+                                  size="md"
+                                />
+                                <div className="flex flex-col">
+                                  <Link
+                                    href={`/users/${question.authorId}`}
+                                    className="text-primary hover:text-primary/80 font-medium"
+                                  >
+                                    {author.name}
+                                  </Link>
+                                  <span className="text-xs text-gray-500">
+                                    {author.reputation} reputation
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Comments Section */}
+                        {showComments && (
+                          <div className="mt-6 pt-6 border-t border-white/10">
+                            <Comments questionId={questionId} type="question" />
+                          </div>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Comments Section */}
-                    {showComments && (
-                      <div className="mt-6 pt-6 border-t border-white/10">
-                        <Comments questionId={questionId} type="question" />
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>

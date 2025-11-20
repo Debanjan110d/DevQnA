@@ -96,6 +96,54 @@ export async function createQuestion(data: {
   }
 }
 
+export async function updateQuestion(questionId: string, data: {
+  title?: string
+  content?: string
+  tags?: string[]
+}) {
+  try {
+    const response = await databases.updateDocument(
+      db,
+      questionCollection,
+      questionId,
+      data
+    )
+    return { success: true, data: response as unknown as Question }
+  } catch (error) {
+    return { success: false, error }
+  }
+}
+
+export async function deleteQuestion(questionId: string) {
+  try {
+    // First, delete all answers related to this question
+    const answers = await getAnswersByQuestionId(questionId)
+    
+    // Delete each answer
+    await Promise.all(
+      answers.map(answer => databases.deleteDocument(db, answerCollection, answer.$id))
+    )
+    
+    // Delete all votes related to this question
+    const votes = await getVotesByTypeId(questionId, 'question')
+    await Promise.all(
+      votes.map(vote => databases.deleteDocument(db, votesCollection, vote.$id))
+    )
+    
+    // Delete all comments related to this question
+    const comments = await getCommentsByTypeId(questionId, 'question')
+    await Promise.all(
+      comments.map(comment => databases.deleteDocument(db, commentCollection, comment.$id))
+    )
+    
+    // Finally, delete the question itself
+    await databases.deleteDocument(db, questionCollection, questionId)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error }
+  }
+}
+
 // Answers
 export async function getAnswersByQuestionId(questionId: string) {
   try {
@@ -126,6 +174,31 @@ export async function createAnswer(data: {
       data
     )
     return { success: true, data: response as unknown as Answer }
+  } catch (error) {
+    return { success: false, error }
+  }
+}
+
+export async function updateAnswer(answerId: string, data: {
+  content: string
+}) {
+  try {
+    const response = await databases.updateDocument(
+      db,
+      answerCollection,
+      answerId,
+      data
+    )
+    return { success: true, data: response as unknown as Answer }
+  } catch (error) {
+    return { success: false, error }
+  }
+}
+
+export async function deleteAnswer(answerId: string) {
+  try {
+    await databases.deleteDocument(db, answerCollection, answerId)
+    return { success: true }
   } catch (error) {
     return { success: false, error }
   }

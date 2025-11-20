@@ -4,6 +4,7 @@
 - Vercel account ([vercel.com](https://vercel.com))
 - Appwrite instance (cloud or self-hosted)
 - GitHub account (for connecting repository)
+- All changes committed to Git
 
 ## Quick Deployment Steps
 
@@ -68,6 +69,8 @@ Vercel automatically detects Next.js and uses:
 - **Build Command**: `npm run build`
 - **Output Directory**: `.next`
 - **Install Command**: `npm install`
+
+The `next.config.ts` is configured with `output: 'standalone'` for optimized Vercel deployments.
 
 **Do NOT create a `vercel.json` file** - it can cause conflicts with auto-detection.
 

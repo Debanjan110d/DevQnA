@@ -1,7 +1,7 @@
 // Client-side Appwrite utilities
-import { databases } from '@/models/client/config'
-import { db, questionCollection, answerCollection, votesCollection, commentCollection } from '@/models/name'
-import { Query } from 'appwrite'
+import { databases, storage } from '@/models/client/config'
+import { db, questionCollection, answerCollection, votesCollection, commentCollection, usersCollection, questionAttachmentBucket } from '@/models/name'
+import { Query, ID } from 'appwrite'
 
 export interface Question {
   $id: string
@@ -41,6 +41,86 @@ export interface Comment {
   type: 'question' | 'answer'
 }
 
+export interface UserProfile {
+  $id: string
+  $createdAt: string
+  userId: string
+  name: string
+  email: string
+  avatar?: string
+  reputation: number
+  bio?: string
+}
+
+// Users
+export async function getUserProfile(userId: string) {
+  try {
+    const response = await databases.listDocuments(
+      db,
+      usersCollection,
+      [Query.equal('userId', userId), Query.limit(1)]
+    )
+    return response.documents[0] as unknown as UserProfile | undefined
+  } catch {
+    return undefined
+  }
+}
+
+export async function createUserProfile(data: {
+  userId: string
+  name: string
+  email: string
+  avatar?: string
+  reputation?: number
+  bio?: string
+}) {
+  try {
+    const response = await databases.createDocument(
+      db,
+      usersCollection,
+      'unique()',
+      {
+        userId: data.userId,
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar || '',
+        reputation: data.reputation || 0,
+        bio: data.bio || '',
+      }
+    )
+    return { success: true, data: response as unknown as UserProfile }
+  } catch (error) {
+    console.error('Failed to create user profile:', error)
+    return { success: false, error }
+  }
+}
+
+export async function updateUserProfile(userId: string, data: {
+  name?: string
+  avatar?: string
+  reputation?: number
+  bio?: string
+}) {
+  try {
+    // First find the document by userId
+    const existing = await getUserProfile(userId)
+    if (!existing) {
+      return { success: false, error: 'User profile not found' }
+    }
+
+    const response = await databases.updateDocument(
+      db,
+      usersCollection,
+      existing.$id,
+      data
+    )
+    return { success: true, data: response as unknown as UserProfile }
+  } catch (error) {
+    console.error('Failed to update user profile:', error)
+    return { success: false, error }
+  }
+}
+
 // Questions
 export async function getQuestions(limit = 25, offset = 0) {
   try {
@@ -74,6 +154,24 @@ export async function getQuestionById(questionId: string) {
   } catch {
     return null
   }
+}
+
+export async function uploadQuestionAttachment(file: File) {
+  try {
+    const response = await storage.createFile(
+      questionAttachmentBucket,
+      ID.unique(),
+      file
+    )
+    return { success: true, fileId: response.$id }
+  } catch (error) {
+    console.error('Failed to upload attachment:', error)
+    return { success: false, error }
+  }
+}
+
+export function getAttachmentUrl(fileId: string) {
+  return storage.getFileView(questionAttachmentBucket, fileId).toString()
 }
 
 export async function createQuestion(data: {

@@ -14,10 +14,11 @@ import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useQuestion, useAuthor, useVotes, useAnswers } from '@/hooks/useAppwrite'
-import { updateQuestion, deleteQuestion } from '@/lib/appwrite'
+import { updateQuestion, deleteQuestion, getAttachmentUrl } from '@/lib/appwrite'
 import { useAuthStore } from '@/store/Auth'
 import { formatDistanceToNow } from '@/lib/utils'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { FiEdit2, FiTrash2 } from 'react-icons/fi'
 
@@ -225,6 +226,20 @@ export default function QuestionDetailPage() {
                         <div data-color-mode="dark" className="prose prose-invert max-w-none mb-6">
                           <Markdown source={question.content} />
                         </div>
+
+                        {/* Attachment Image */}
+                        {question.attachmentId && (
+                          <div className="mb-6 rounded-lg overflow-hidden border border-white/10">
+                            <Image
+                              src={getAttachmentUrl(question.attachmentId)}
+                              alt="Question attachment"
+                              width={800}
+                              height={600}
+                              className="w-full h-auto"
+                              unoptimized
+                            />
+                          </div>
+                        )}
 
                         {/* Question Footer */}
                         <div className="flex items-center justify-between pt-6 border-t border-white/10">

@@ -5,6 +5,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Badge } from './ui/badge'
 import { ShimmerButton } from './ui/shimmer-button'
+import { uploadQuestionAttachment } from '@/lib/appwrite'
 import dynamic from 'next/dynamic'
 
 const RTE = dynamic(() => import('./RTE'), { ssr: false })
@@ -60,11 +61,23 @@ export function QuestionForm({ onSubmit, authorId }: QuestionFormProps) {
     try {
       const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean)
       
+      // Upload image if present
+      let attachmentId: string | undefined
+      if (image) {
+        const uploadResult = await uploadQuestionAttachment(image)
+        if (uploadResult.success && uploadResult.fileId) {
+          attachmentId = uploadResult.fileId
+        } else {
+          throw new Error('Failed to upload image')
+        }
+      }
+      
       const questionData: QuestionData = {
         title: title.trim(),
         content: content.trim(),
         tags: tagArray,
         authorId,
+        attachmentId,
       }
 
       if (onSubmit) {

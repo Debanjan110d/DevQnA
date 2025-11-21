@@ -3,6 +3,8 @@ import { createAnswerTable } from "./answer.collection";
 import { createQuestionTable } from "./question.collection";
 import { createVotesTable } from "./votes.collection";
 import { createCommentTable } from "./comment.collection";
+import { createUserTable } from "./user.collection";
+import createQuestionAttachmentBucket from "./storageSetup";
 
 import { databases } from "./config";
 
@@ -33,10 +35,12 @@ export default async function createDB() {
     await retryWithBackoff(() => databases.get({ databaseId: db }));
     // Database already exists, tables will be created if needed
 
+    await createUserTable();
     await createQuestionTable();
     await createAnswerTable();
     await createVotesTable();
     await createCommentTable();
+    await createQuestionAttachmentBucket();
 
 
   } catch (error: unknown) {
@@ -56,10 +60,12 @@ export default async function createDB() {
 
         // Database created successfully
 
+        await createUserTable();
         await createQuestionTable();
         await createAnswerTable();
         await createVotesTable();
         await createCommentTable();
+        await createQuestionAttachmentBucket();
 
 
       } catch (createError: unknown) {

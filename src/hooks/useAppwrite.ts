@@ -10,6 +10,7 @@ import {
   getUserVote,
   calculateVoteCount,
   getStats,
+  getUserProfile,
   type Question,
   type Answer,
   type Vote,
@@ -233,26 +234,33 @@ export function useAuthor(authorId: string) {
 
   useEffect(() => {
     async function fetchAuthor() {
-      if (!authorId) return
+      if (!authorId) {
+        setLoading(false)
+        return
+      }
 
       try {
         setLoading(true)
-        // Try to get user from Appwrite
-        try {
-          const userData = await account.get<UserPrefs>()
-          if (userData.$id === authorId) {
-            setAuthor({
-              name: userData.name,
-              reputation: userData.prefs?.reputation || 0,
-              avatar: userData.prefs?.avatar
-            })
-            return
-          }
-        } catch {
-          // User not found or not logged in, use fallback
-        }
+        // Fetch user profile from users collection
+        const userProfile = await getUserProfile(authorId)
         
-        // Fallback: Use abbreviated ID as name
+        if (userProfile) {
+          setAuthor({
+            name: userProfile.name,
+            reputation: userProfile.reputation || 0,
+            avatar: userProfile.avatar
+          })
+        } else {
+          // Fallback: Use abbreviated ID as name
+          setAuthor({
+            name: 'User#' + authorId.substring(0, 6),
+            reputation: 0,
+            avatar: undefined
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch author:', error)
+        // Fallback on error
         setAuthor({
           name: 'User#' + authorId.substring(0, 6),
           reputation: 0,

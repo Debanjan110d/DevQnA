@@ -7,6 +7,7 @@ import { persist } from "zustand/middleware";
 import {AppwriteException,ID,Models}  from "appwrite";// since this is going to be login based so we not importing it from the node-appwrite but if you want to add more features then you can import it from node-appwrite
 //Some client side configurations
 import { account } from "@/models/client/config";
+import { createUserProfile, getUserProfile } from "@/lib/appwrite";
 
 
 //Lets make user reputaton 
@@ -82,7 +83,20 @@ export const useAuthStore = create<MyAuthStore>()( //? the 1st () are initilizin
                             ])
                             if (!user.prefs?.reputation) {
                                 await account.updatePrefs({ prefs: { reputation: 0 } });
-                            }    
+                            }
+                            
+                            // Ensure user profile exists in database
+                            const existingProfile = await getUserProfile(user.$id);
+                            if (!existingProfile) {
+                                await createUserProfile({
+                                    userId: user.$id,
+                                    name: user.name,
+                                    email: user.email,
+                                    avatar: user.prefs?.avatar,
+                                    reputation: user.prefs?.reputation || 0,
+                                });
+                            }
+                            
                             set({session,user,jwt});
                             return {
                                 sucess : true
@@ -99,7 +113,16 @@ export const useAuthStore = create<MyAuthStore>()( //? the 1st () are initilizin
                     
                     async createAccount(email: string,password: string,name:string){
                         try {
-                            await account.create({userId:ID.unique(),email,password,name});
+                            const newUser = await account.create({userId:ID.unique(),email,password,name});
+                            
+                            // Create user profile in database
+                            await createUserProfile({
+                                userId: newUser.$id,
+                                name: name,
+                                email: email,
+                                reputation: 0,
+                            });
+                            
                             return{
                                 sucess : true
                             }

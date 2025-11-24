@@ -1,4 +1,4 @@
-import { Avatars, Client, Databases, Storage, Users, TablesDB } from "node-appwrite";
+import { Avatars, Client, Databases, Storage, Users } from "node-appwrite";
 
 const client = new Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_HOST_URI!)
@@ -8,7 +8,6 @@ const client = new Client()
 export const users = new Users(client);
 export const avatars = new Avatars(client);
 export const databases = new Databases(client);
-export const tables = new TablesDB(client);
 export const storage = new Storage(client);
 
 export default client;

@@ -31,33 +31,20 @@ export function VoteButtons({
     setIsVoting(true)
 
     try {
-      // If clicking the same vote button, remove the vote
-      if (userVote === voteType) {
-        // Get current vote to delete
-        const userVoteDoc = await getUserVote(id, type, session.$id)
-        if (userVoteDoc?.$id) {
-          const result = await deleteVote(userVoteDoc.$id)
-          if (result.success) {
-            setUserVote(null)
-            // Recalculate vote count
-            const votes = await getVotesByTypeId(id, type)
-            setVoteCount(calculateVoteCount(votes))
-          }
-        }
-      } else {
-        // Create or update vote
-        const result = await createOrUpdateVote({
-          typeId: id,
-          type,
-          votedById: session.$id,
-          voteStatus: voteType
-        })
-        if (result.success) {
+      const result = await createOrUpdateVote({
+        typeId: id,
+        type,
+        votedById: session.$id,
+        voteStatus: voteType
+      })
+
+      if (result.success) {
+        if (userVote === voteType) {
+          setUserVote(null)
+        } else {
           setUserVote(voteType)
-          // Recalculate vote count
-          const votes = await getVotesByTypeId(id, type)
-          setVoteCount(calculateVoteCount(votes))
         }
+        setVoteCount(result.data.voteResult)
       }
     } catch {
       alert('Failed to vote. Please try again.')

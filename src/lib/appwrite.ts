@@ -265,13 +265,16 @@ export async function createAnswer(data: {
   questionId: string
 }) {
   try {
-    const response = await databases.createDocument(
-      db,
-      answerCollection,
-      'unique()',
-      data
-    )
-    return { success: true, data: response as unknown as Answer }
+    const response = await fetch('/api/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    
+    if (!response.ok) throw new Error('Failed to create answer')
+    
+    const result = await response.json()
+    return { success: true, data: result }
   } catch (error) {
     return { success: false, error }
   }
@@ -295,7 +298,14 @@ export async function updateAnswer(answerId: string, data: {
 
 export async function deleteAnswer(answerId: string) {
   try {
-    await databases.deleteDocument(db, answerCollection, answerId)
+    const response = await fetch('/api/answer', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answerId }),
+    })
+    
+    if (!response.ok) throw new Error('Failed to delete answer')
+    
     return { success: true }
   } catch (error) {
     return { success: false, error }
@@ -343,31 +353,28 @@ export async function createOrUpdateVote(data: {
   type: 'question' | 'answer'
 }, existingVoteId?: string) {
   try {
-    if (existingVoteId) {
-      // Update existing vote
-      const response = await databases.updateDocument(
-        db,
-        votesCollection,
-        existingVoteId,
-        { voteStatus: data.voteStatus }
-      )
-      return { success: true, data: response as unknown as Vote }
-    } else {
-      // Create new vote
-      const response = await databases.createDocument(
-        db,
-        votesCollection,
-        'unique()',
-        data
-      )
-      return { success: true, data: response as unknown as Vote }
-    }
+    const response = await fetch('/api/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        votedByID: data.votedById,
+        voteStatus: data.voteStatus,
+        type: data.type,
+        typeId: data.typeId
+      }),
+    })
+    
+    if (!response.ok) throw new Error('Failed to vote')
+    
+    const result = await response.json()
+    return { success: true, data: result.data }
   } catch (error) {
     return { success: false, error }
   }
 }
 
 export async function deleteVote(voteId: string) {
+  // Deprecated: Use createOrUpdateVote to toggle votes via API
   try {
     await databases.deleteDocument(db, votesCollection, voteId)
     return { success: true }

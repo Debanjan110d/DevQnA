@@ -1,4 +1,4 @@
-import { Permission } from "node-appwrite";
+import { Permission, IndexType } from "node-appwrite";
 import { db, votesCollection } from "@/models/name";
 import { databases } from "./config";
 
@@ -21,12 +21,12 @@ export async function createVotesTable() {
     // Wait for attributes
     await new Promise(r => setTimeout(r, 2000));
 
-    await databases.createIndex(db, votesCollection, "idx_type", "key", ["type"]);
-    await databases.createIndex(db, votesCollection, "idx_typeId", "key", ["typeId"]);
-    await databases.createIndex(db, votesCollection, "idx_votedById", "key", ["votedById"]);
+    await databases.createIndex(db, votesCollection, "idx_type", IndexType.Key, ["type"]);
+    await databases.createIndex(db, votesCollection, "idx_typeId", IndexType.Key, ["typeId"]);
+    await databases.createIndex(db, votesCollection, "idx_votedById", IndexType.Key, ["votedById"]);
 
     console.log("Votes Indexes Created");
-  } catch (error: any) {
-    console.log("Votes Collection Error (or already exists):", error.message);
+  } catch (error) {
+    console.log("Votes Collection Error (or already exists):", error);
   }
 }

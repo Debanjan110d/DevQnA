@@ -15,11 +15,11 @@ import { User, Question, Answer } from '@/models'
 export const revalidate = 0
 
 interface UserProfileProps {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export async function generateMetadata({ params }: UserProfileProps): Promise<Metadata> {
-  const { id } = await params
+  const { id } = params
   try {
     const user = await users.get(id)
     return {
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: UserProfileProps): Promise<Me
 }
 
 export default async function UserProfilePage({ params }: UserProfileProps) {
-  const { id } = await params
+  const { id } = params
 
   // 1. Fetch User Data
   let user: User | null = null

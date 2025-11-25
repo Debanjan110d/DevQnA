@@ -32,56 +32,27 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3, delay = 10
 
 export default async function createDB() {
   try {
-    await retryWithBackoff(() => databases.get({ databaseId: db }));
-    // Database already exists, tables will be created if needed
-
-    await createUserTable();
-    await createQuestionTable();
-    await createAnswerTable();
-    await createVotesTable();
-    await createCommentTable();
-    await createQuestionAttachmentBucket();
-
-
-  } catch (error: unknown) {
-    const status = error && typeof error === "object" && ("code" in error ? (error as { code: number }).code : 
-                   "response" in error && error.response && typeof error.response === "object" && "status" in error.response ? 
-                   (error.response as { status: number }).status : 
-                   "status" in error ? (error as { status: number }).status : undefined);
-    const message = error instanceof Error ? error.message : String(error);
-
-    if (status === 404 || /not found/i.test(message)) {
-      try {
-        const created = await retryWithBackoff(() => databases.create({
-          databaseId: db,
-          name: "StackOverflow Database",
-          enabled: true,
-        }));
-
-        // Database created successfully
-
-        await createUserTable();
-        await createQuestionTable();
-        await createAnswerTable();
-        await createVotesTable();
-        await createCommentTable();
-        await createQuestionAttachmentBucket();
-
-
-      } catch (createError: unknown) {
-        const createMessage = createError instanceof Error ? createError.message : String(createError);
-        console.error("❌ Error creating database:", createMessage);
-        throw createError;
-      }
-    } else {
-      console.error("❌ Error checking database:", error);
-      console.error("💡 If you see 502 Bad Gateway, check:");
-      console.error("   1. Appwrite server is running and accessible");
-      console.error("   2. NEXT_PUBLIC_APPWRITE_HOST_URI is correct in .env");
-      console.error("   3. Your network connection");
-      throw error;
+    await retryWithBackoff(() => databases.get(db));
+    console.log("Database connected");
+  } catch (error: any) {
+    try {
+      await retryWithBackoff(() => databases.create(db, db));
+      console.log("Database created");
+    } catch (err) {
+      console.log("Database creation failed or already exists", err);
     }
   }
+
+  await Promise.all([
+    createUserTable(),
+    createQuestionTable(),
+    createAnswerTable(),
+    createVotesTable(),
+    createCommentTable(),
+    createQuestionAttachmentBucket(),
+  ]);
+
+  console.log("Collection creation tasks initiated");
 }
 
 if (require.main === module) {

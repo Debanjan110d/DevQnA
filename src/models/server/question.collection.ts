@@ -1,4 +1,4 @@
-import { Permission } from "node-appwrite";
+import { Permission, IndexType } from "node-appwrite";
 import { db, questionCollection } from "@/models/name";
 import { databases } from "./config";
 
@@ -22,12 +22,12 @@ export async function createQuestionTable() {
     // Wait for attributes
     await new Promise(r => setTimeout(r, 2000));
 
-    await databases.createIndex(db, questionCollection, "idx_title", "fulltext", ["title"]);
-    await databases.createIndex(db, questionCollection, "idx_content", "fulltext", ["content"]);
+    await databases.createIndex(db, questionCollection, "idx_title", IndexType.Fulltext, ["title"]);
+    await databases.createIndex(db, questionCollection, "idx_content", IndexType.Fulltext, ["content"]);
 
     console.log("Question Indexes Created");
-  } catch (error: any) {
-    console.log("Question Collection Error (or already exists):", error.message);
+  } catch (error) {
+    console.log("Question Collection Error (or already exists):", error);
   }
 }
 

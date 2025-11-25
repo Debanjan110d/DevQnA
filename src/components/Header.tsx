@@ -52,6 +52,9 @@ export function Header() {
                 <Link href="/tags">
                   <Button variant="ghost">Tags</Button>
                 </Link>
+                <Link href={`/users/${user.$id}`}>
+                  <Button variant="ghost">Profile</Button>
+                </Link>
                 <Link href="/ask">
                   <Button>Ask Question</Button>
                 </Link>
@@ -101,6 +104,11 @@ export function Header() {
                 <Link href="/tags" className="block">
                   <Button variant="ghost" className="w-full justify-start">
                     Tags
+                  </Button>
+                </Link>
+                <Link href={`/users/${user.$id}`} className="block">
+                  <Button variant="ghost" className="w-full justify-start">
+                    Profile
                   </Button>
                 </Link>
                 <Link href="/ask" className="block">

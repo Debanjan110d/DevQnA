@@ -36,22 +36,27 @@ export default async function UserProfilePage({ params }: UserProfileProps) {
   // 1. Fetch User Data
   let user: User | null = null
   let joinedAt = ''
-  
+
+  // Prefer richer profile document if available
   try {
-    // Try to get from Users collection first (richer data)
     const userDocs = await databases.listDocuments(db, usersCollection, [
       Query.equal('userId', id),
       Query.limit(1)
     ])
-    
+
     if (userDocs.documents.length > 0) {
       user = userDocs.documents[0] as unknown as User
       joinedAt = userDocs.documents[0].$createdAt
-    } else {
-      // Fallback to Auth user
+    }
+  } catch (error) {
+    console.error('Failed to load profile document:', error)
+  }
+
+  if (!user) {
+    try {
       const authUser = await users.get(id)
       user = {
-        $id: id, // Use auth ID as fallback ID
+        $id: id,
         name: authUser.name,
         email: authUser.email,
         reputation: authUser.prefs?.reputation || 0,
@@ -59,37 +64,49 @@ export default async function UserProfilePage({ params }: UserProfileProps) {
         bio: '',
       }
       joinedAt = authUser.$createdAt
-    }
-  } catch (error) {
-    console.error('Error fetching user:', error)
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold mb-4">User Not Found</h1>
-            <p className="text-gray-400">The user you are looking for does not exist.</p>
-            <Link href="/" className="text-primary hover:underline mt-4 block">Go Home</Link>
+    } catch (error) {
+      console.error('Unable to fetch fallback auth user:', error)
+      return (
+        <div className="min-h-screen bg-black text-white flex flex-col">
+          <Header />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold mb-4">User Not Found</h1>
+              <p className="text-gray-400">The user you are looking for does not exist.</p>
+              <Link href="/" className="text-primary hover:underline mt-4 block">Go Home</Link>
+            </div>
           </div>
+          <Footer />
         </div>
-        <Footer />
-      </div>
-    )
+      )
+    }
   }
 
   // 2. Fetch Questions
-  const questions = await databases.listDocuments(db, questionCollection, [
-    Query.equal('authorId', id),
-    Query.orderDesc('$createdAt'),
-    Query.limit(10)
-  ])
+  let questions
+  try {
+    questions = await databases.listDocuments(db, questionCollection, [
+      Query.equal('authorId', id),
+      Query.orderDesc('$createdAt'),
+      Query.limit(10)
+    ])
+  } catch (error) {
+    console.error('Failed to load user questions:', error)
+    questions = { documents: [], total: 0 }
+  }
 
   // 3. Fetch Answers
-  const answers = await databases.listDocuments(db, answerCollection, [
-    Query.equal('authorId', id),
-    Query.orderDesc('$createdAt'),
-    Query.limit(10)
-  ])
+  let answers
+  try {
+    answers = await databases.listDocuments(db, answerCollection, [
+      Query.equal('authorId', id),
+      Query.orderDesc('$createdAt'),
+      Query.limit(10)
+    ])
+  } catch (error) {
+    console.error('Failed to load user answers:', error)
+    answers = { documents: [], total: 0 }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
